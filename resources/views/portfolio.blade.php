@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Portfolio - {{ $portfolio['nama'] }}</title>
     
     <!-- Fonts -->
@@ -317,8 +318,31 @@
         </div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center fade-in-up">
-                <div class="mx-auto h-32 w-32 rounded-full bg-white flex items-center justify-center mb-6 shadow-2xl avatar-circle">
-                    <span class="text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent">{{ substr($portfolio['nama'], 0, 1) }}</span>
+                <!-- Foto Profil Container -->
+                <div class="relative mx-auto w-32 h-32 mb-6 inline-block group">
+                    <div class="h-32 w-32 rounded-full bg-white flex items-center justify-center shadow-2xl avatar-circle overflow-hidden border-4 border-white/30">
+                        @if(isset($portfolio['foto_profil']) && $portfolio['foto_profil'])
+                            <img src="{{ $portfolio['foto_profil'] }}" alt="Foto Profil" class="w-full h-full object-cover rounded-full">
+                        @else
+                            <span class="text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent">{{ substr($portfolio['nama'], 0, 1) }}</span>
+                        @endif
+                    </div>
+                    <!-- Upload Button Overlay -->
+                    <label for="fotoInput" class="absolute bottom-0 right-0 w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform duration-300 group-hover:opacity-100 opacity-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <input type="file" id="fotoInput" name="foto_profil" accept="image/*" class="hidden">
+                    </label>
+                    @if(isset($portfolio['foto_profil']) && $portfolio['foto_profil'])
+                    <!-- Delete Button -->
+                    <button id="hapusFotoBtn" class="absolute top-0 right-0 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform duration-300 opacity-0 group-hover:opacity-100">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                    @endif
                 </div>
                 <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">{{ $portfolio['nama'] }}</h1>
                 <p class="text-xl text-white/95 mb-2 font-medium">{{ $portfolio['jurusan'] }}</p>
@@ -507,6 +531,79 @@
         </div>
     </footer>
 
+    <!-- AI Chat Widget -->
+    <div id="aiChatWidget" class="fixed bottom-6 right-6 z-50">
+        <!-- Chat Button -->
+        <button id="chatToggle" class="w-16 h-16 rounded-full bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-2xl hover:shadow-orange-500/50 transition-all duration-300 hover:scale-110 flex items-center justify-center group">
+            <svg id="chatIcon" class="w-6 h-6 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            <svg id="closeIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse"></span>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="chatWindow" class="hidden absolute bottom-20 right-0 w-96 h-[500px] bg-white rounded-2xl shadow-2xl border-2 border-orange-200 flex flex-col overflow-hidden">
+            <!-- Chat Header -->
+            <div class="bg-gradient-to-r from-orange-500 to-orange-400 text-white p-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold">AI Assistant</h3>
+                        <p class="text-xs text-white/80">Tanyakan tentang portfolio</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                <div class="flex items-start space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-orange-400 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 shadow-md max-w-[80%]">
+                        <p class="text-sm text-gray-700">Halo! 👋 Saya adalah AI Assistant untuk portfolio ini. Saya bisa membantu menjawab pertanyaan tentang:</p>
+                        <ul class="text-sm text-gray-600 mt-2 list-disc list-inside">
+                            <li>Informasi pribadi</li>
+                            <li>Skills dan teknologi</li>
+                            <li>Proyek yang telah dikerjakan</li>
+                            <li>Informasi kontak</li>
+                        </ul>
+                        <p class="text-sm text-gray-700 mt-2">Silakan tanyakan apa yang ingin Anda ketahui! 😊</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="p-4 bg-white border-t border-gray-200">
+                <form id="chatForm" class="flex space-x-2">
+                    <input 
+                        type="text" 
+                        id="chatInput" 
+                        placeholder="Tulis pesan Anda..." 
+                        class="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 transition"
+                        autocomplete="off"
+                    >
+                    <button 
+                        type="submit" 
+                        id="sendButton"
+                        class="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-lg hover:from-orange-600 hover:to-orange-500 transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Kirim
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Smooth Scroll -->
     <script>
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -521,6 +618,299 @@
                 }
             });
         });
+    </script>
+
+    <!-- AI Chat Script -->
+    <script>
+        // Chat Widget Toggle
+        const chatToggle = document.getElementById('chatToggle');
+        const chatWindow = document.getElementById('chatWindow');
+        const chatIcon = document.getElementById('chatIcon');
+        const closeIcon = document.getElementById('closeIcon');
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const sendButton = document.getElementById('sendButton');
+
+        chatToggle.addEventListener('click', () => {
+            chatWindow.classList.toggle('hidden');
+            chatIcon.classList.toggle('hidden');
+            closeIcon.classList.toggle('hidden');
+        });
+
+        // Add message to chat
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-start space-x-2 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+            
+            const avatar = isUser ? '' : `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-orange-400 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+            `;
+            
+            const userAvatar = isUser ? `
+                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </div>
+            ` : '';
+
+            messageDiv.innerHTML = `
+                ${isUser ? userAvatar : avatar}
+                <div class="${isUser ? 'bg-orange-500 text-white' : 'bg-white'} rounded-lg p-3 shadow-md max-w-[80%]">
+                    <p class="text-sm">${message}</p>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Show typing indicator
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'flex items-start space-x-2';
+            typingDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-orange-500 to-orange-400 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+                <div class="bg-white rounded-lg p-3 shadow-md">
+                    <div class="flex space-x-1">
+                        <div class="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                        <div class="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Remove typing indicator
+        function removeTyping() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Handle form submission
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            chatInput.value = '';
+            sendButton.disabled = true;
+
+            // Show typing indicator
+            showTyping();
+
+            try {
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                removeTyping();
+
+                if (data.success) {
+                    addMessage(data.response);
+                } else {
+                    addMessage('Maaf, terjadi kesalahan. Silakan coba lagi.');
+                }
+            } catch (error) {
+                removeTyping();
+                addMessage('Maaf, terjadi kesalahan koneksi. Silakan coba lagi.');
+            } finally {
+                sendButton.disabled = false;
+            }
+        });
+
+        // Add CSRF token meta tag if not exists
+        if (!document.querySelector('meta[name="csrf-token"]')) {
+            const meta = document.createElement('meta');
+            meta.name = 'csrf-token';
+            meta.content = '{{ csrf_token() }}';
+            document.head.appendChild(meta);
+        }
+    </script>
+
+    <!-- Foto Profil Upload Script -->
+    <script>
+        const fotoInput = document.getElementById('fotoInput');
+        const hapusFotoBtn = document.getElementById('hapusFotoBtn');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        // Handle foto upload
+        if (fotoInput) {
+            fotoInput.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                // Validate file size (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Ukuran file maksimal 2MB!');
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.match('image.*')) {
+                    alert('File harus berupa gambar!');
+                    return;
+                }
+
+                // Show loading
+                const avatarContainer = document.querySelector('.avatar-circle');
+                const originalContent = avatarContainer.innerHTML;
+                avatarContainer.innerHTML = '<div class="w-full h-full flex items-center justify-center"><div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>';
+
+                // Create FormData
+                const formData = new FormData();
+                formData.append('foto_profil', file);
+                formData.append('_token', csrfToken);
+
+                try {
+                    const response = await fetch('/api/upload-foto', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Update foto profil
+                        const img = document.createElement('img');
+                        img.src = data.url;
+                        img.alt = 'Foto Profil';
+                        img.className = 'w-full h-full object-cover rounded-full';
+                        avatarContainer.innerHTML = '';
+                        avatarContainer.appendChild(img);
+
+                        // Show delete button if not exists
+                        if (!hapusFotoBtn) {
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.id = 'hapusFotoBtn';
+                            deleteBtn.className = 'absolute top-0 right-0 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform duration-300 opacity-0 group-hover:opacity-100';
+                            deleteBtn.innerHTML = `
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            `;
+                            deleteBtn.addEventListener('click', handleHapusFoto);
+                            document.querySelector('.relative.mx-auto').appendChild(deleteBtn);
+                        }
+
+                        // Show success message
+                        showNotification('Foto profil berhasil diupload!', 'success');
+                        
+                        // Reload page after 1 second to show updated foto
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        avatarContainer.innerHTML = originalContent;
+                        showNotification(data.message || 'Gagal mengupload foto!', 'error');
+                    }
+                } catch (error) {
+                    avatarContainer.innerHTML = originalContent;
+                    showNotification('Terjadi kesalahan saat mengupload foto!', 'error');
+                    console.error('Upload error:', error);
+                }
+            });
+        }
+
+        // Handle hapus foto
+        function handleHapusFoto() {
+            if (!confirm('Yakin ingin menghapus foto profil?')) {
+                return;
+            }
+
+            const avatarContainer = document.querySelector('.avatar-circle');
+            const originalContent = avatarContainer.innerHTML;
+            avatarContainer.innerHTML = '<div class="w-full h-full flex items-center justify-center"><div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div></div>';
+
+            fetch('/api/hapus-foto', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reset to initial avatar
+                    const firstLetter = '{{ substr($portfolio["nama"], 0, 1) }}';
+                    avatarContainer.innerHTML = `<span class="text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent">${firstLetter}</span>`;
+                    
+                    // Remove delete button
+                    if (hapusFotoBtn) {
+                        hapusFotoBtn.remove();
+                    }
+
+                    showNotification('Foto profil berhasil dihapus!', 'success');
+                    
+                    // Reload page after 1 second
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    avatarContainer.innerHTML = originalContent;
+                    showNotification(data.message || 'Gagal menghapus foto!', 'error');
+                }
+            })
+            .catch(error => {
+                avatarContainer.innerHTML = originalContent;
+                showNotification('Terjadi kesalahan saat menghapus foto!', 'error');
+                console.error('Delete error:', error);
+            });
+        }
+
+        if (hapusFotoBtn) {
+            hapusFotoBtn.addEventListener('click', handleHapusFoto);
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-20 right-6 z-50 px-6 py-4 rounded-lg shadow-2xl transform transition-all duration-300 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white font-semibold`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 10);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
     </script>
 </body>
 </html>
